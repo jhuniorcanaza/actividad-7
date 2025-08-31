@@ -1,20 +1,47 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Alert } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import AppNavigator from './src/components/AppNavigator';
+
+// Configurar el manejo de notificaciones
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  const notificationListener = useRef();
+  const responseListener = useRef();
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  useEffect(() => {
+    // Solicitar permisos para notificaciones
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permisos', 'Se necesitan permisos para las notificaciones');
+      }
+    };
+
+    requestPermissions();
+
+    // Escuchar notificaciones recibidas en primer plano
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notificación recibida:', notification);
+    });
+
+    // Escuchar respuestas a notificaciones
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Usuario interactuó con la notificación:', response);
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
+
+  return <AppNavigator />;
+}
